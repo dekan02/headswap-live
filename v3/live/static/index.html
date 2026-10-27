@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HeadSwap Live</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #161616;
+    --surface-2: #1f1f1f;
+    --border: #2c2c2c;
+    --border-soft: #202020;
+    --text: #f1f2f4;
+    --text-dim: #b0adad;
+    --text-faint: #7a7676;
+    --accent: #ff7a00;
+    --accent-dim: #5c3410;
+    --accent-text: #fff3e8;
+    --success: #2fbf6e;
+    --success-bg: #123321;
+    --warn: #ff7a00;
+    --warn-bg: #3a2410;
+    --danger: #ff5c5c;
+    --danger-bg: #3a1518;
+    --radius: 12px;
+    --radius-sm: 8px;
+    font-size: 15px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 0 20px 48px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 880px;
+    margin: 0 auto;
+  }
+
+  header.top {
+    padding: 28px 0 20px;
+    border-bottom: 1px solid var(--border-soft);
+    margin-bottom: 24px;
+  }
+
+  h1 {
+    font-size: 1.25rem;
+    font-weight: 650;
+    color: #fff;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+
+  #global-error { margin-bottom: 4px; }
+
+  .error {
+    background: var(--danger-bg);
+    border: 1px solid #6b2429;
+    color: #ffb4b4;
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    margin: 0 0 20px;
+    white-space: pre-wrap;
+    font-size: 0.88rem;
+  }
+
+  /* ---- Tabs ---- */
+
+  nav.tabs {
+    display: flex;
+    align-items: stretch;
+    gap: 4px;
+    margin-bottom: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 6px;
+  }
+
+  .tab {
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    user-select: none;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    font-weight: 550;
+    transition: background 0.15s ease, color 0.15s ease;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+
+  .tab .num {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--text-faint);
+    font-size: 0.72rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .tab.active {
+    background: var(--accent-dim);
+    color: var(--accent-text);
+  }
+  .tab.active .num { background: var(--accent); color: #fff; }
+
+  .tab.complete .num { background: var(--success); color: #08240f; }
+  .tab.complete:not(.active) { color: #cdd3dc; }
+
+  .tab.locked { color: var(--text-faint); cursor: not-allowed; }
+  .tab.locked .num { background: var(--surface-2); }
+
+  .tab:not(.locked):not(.active):hover { background: var(--surface-2); color: var(--text); }
+
+  @media (max-width: 560px) {
+    nav.tabs { flex-wrap: wrap; }
+    .tab { flex: 1 1 45%; }
+    .tab .label { display: none; }
+  }
+
+  /* ---- Panels ---- */
+
+  .panel-view { display: none; }
+  .panel-view.active { display: block; animation: fade-in 0.18s ease; }
+
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(2px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 22px 22px;
+  }
+
+  .card h2 {
+    margin: 0 0 6px;
+    font-size: 1.02rem;
+    font-weight: 600;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px 3px 8px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+  .status-chip.pending { background: var(--surface-2); color: var(--text-faint); }
+  .status-chip.done { background: var(--success-bg); color: var(--success); }
+  .status-chip .dot { width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+
+  /* ---- Media ---- */
+
+  .media-frame {
+    background: #000;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    position: relative;
+    aspect-ratio: 16 / 9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  video, canvas, img.result {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 4px;
+  }
+  @media (max-width: 620px) {
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+
+  .panel-label {
+    font-size: 0.78rem;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 0 0 8px;
+    font-weight: 600;
+  }
+
+  /* ---- Controls ---- */
+
+  .controls-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+
+  button {
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 11px 20px;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+    transition: filter 0.12s ease, transform 0.05s ease;
+  }
+  button:hover:not(:disabled) { filter: brightness(1.08); }
+  button:active:not(:disabled) { transform: scale(0.98); }
+  button:disabled { background: var(--surface-2); color: var(--text-faint); cursor: not-allowed; }
+  button.secondary { background: var(--surface-2); color: var(--text); border-color: var(--border); }
+  button.secondary.active-toggle { background: var(--danger-bg); color: #ffb4b4; border-color: #5a2226; }
+
+  .field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .field label {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+  input[type=number] {
+    width: 64px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: 0.88rem;
+  }
+  input[type=number]:focus { outline: 2px solid var(--accent-dim); outline-offset: 1px; }
+
+  .status-line {
+    margin-top: 10px;
+    font-size: 0.85rem;
+    min-height: 1.2em;
+  }
+  .status-line.processing { color: var(--warn); font-weight: 600; }
+  .status-line.ready { color: var(--success); font-weight: 600; }
+
+  .timings {
+    font-size: 0.76rem;
+    color: var(--text-faint);
+    margin-top: 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+
+  .placeholder-empty {
+    color: var(--text-faint);
+    font-size: 0.8rem;
+  }
+
+  .nav-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 18px;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="top">
+  <h1>HeadSwap Live</h1>
+</header>
+
+<div id="global-error"></div>
+
+<nav class="tabs" id="tabs">
+  <div class="tab active" data-tab="camera">
+    <span class="num">1</span><span class="label">Camera</span>
+  </div>
+  <div class="tab locked" data-tab="plate">
+    <span class="num">2</span><span class="label">Background</span>
+  </div>
+  <div class="tab locked" data-tab="pose">
+    <span class="num">3</span><span class="label">Pose</span>
+  </div>
+  <div class="tab locked" data-tab="capture">
+    <span class="num">4</span><span class="label">Capture</span>
+  </div>
+</nav>
+
+<div class="panel-view active" id="view-camera">
+  <div class="card">
+    <h2>Camera <span class="status-chip pending" id="badge-camera"><span class="dot"></span>pending</span></h2>
+    <div class="media-frame">
+      <video id="preview" autoplay playsinline muted></video>
+    </div>
+    <div class="controls-row">
+      <button id="btn-camera">Enable camera</button>
+    </div>
+    <div class="nav-footer">
+      <button class="secondary" id="next-camera" disabled>Next: Background &rarr;</button>
+    </div>
+  </div>
+</div>
+
+<div class="panel-view" id="view-plate">
+  <div class="card">
+    <h2>Background calibration <span class="status-chip pending" id="badge-plate"><span class="dot"></span>pending</span></h2>
+    <div class="status-line" id="plate-auto-status">Starting automatic capture...</div>
+    <div class="controls-row">
+      <button class="secondary" id="btn-plate-retry" style="display:none;">Retry capture</button>
+    </div>
+    <div class="nav-footer">
+      <button class="secondary" id="next-plate" disabled>Next: Pose &rarr;</button>
+    </div>
+  </div>
+</div>
+
+<div class="panel-view" id="view-pose">
+  <div class="card">
+    <h2>Pose calibration <span class="status-chip pending" id="badge-pose"><span class="dot"></span>pending</span></h2>
+    <div class="controls-row">
+      <button id="btn-pose">Capture calibration pose</button>
+    </div>
+    <div class="nav-footer">
+      <button class="secondary" id="next-pose" disabled>Next: Capture &rarr;</button>
+    </div>
+  </div>
+</div>
+
+<div class="panel-view" id="view-capture">
+  <div class="card">
+    <h2>Capture</h2>
+
+    <div class="controls-row">
+      <button id="btn-snap">Capture &amp; swap</button>
+      <button id="btn-auto" class="secondary">Start auto-capture</button>
+      <div class="field">
+        <label for="interval">every</label>
+        <input type="number" id="interval" value="0" min="0" step="1">
+        <label for="interval">sec (0 = manual only)</label>
+      </div>
+    </div>
+
+    <div class="status-line" id="status"></div>
+
+    <div class="grid-2">
+      <div>
+        <p class="panel-label">Captured</p>
+        <div class="media-frame"><canvas id="captured"></canvas></div>
+      </div>
+      <div>
+        <p class="panel-label">Result</p>
+        <div class="media-frame"><img class="result" id="result" alt="composited result appears here after processing"></div>
+      </div>
+    </div>
+
+    <div class="timings" id="timings"></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const video = $('preview');
+const capturedCanvas = $('captured');
+const resultImg = $('result');
+const statusEl = $('status');
+const timingsEl = $('timings');
+const globalError = $('global-error');
+
+let stream = null;
+let autoTimer = null;
+let busy = false;
+
+const TAB_ORDER = ['camera', 'plate', 'pose', 'capture'];
+const unlocked = new Set(['camera']);
+
+function showError(msg) {
+  globalError.innerHTML = `<div class="error">${msg}</div>`;
+}
+function clearError() { globalError.innerHTML = ''; }
+
+function setBadge(id, done) {
+  const el = $(id);
+  el.innerHTML = `<span class="dot"></span>${done ? 'done' : 'pending'}`;
+  el.className = 'status-chip ' + (done ? 'done' : 'pending');
+}
+
+function setTab(name) {
+  if (!unlocked.has(name)) return;
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === name);
+  });
+  document.querySelectorAll('.panel-view').forEach(p => {
+    p.classList.toggle('active', p.id === `view-${name}`);
+  });
+}
+
+function unlockTab(name, autoAdvance = true) {
+  unlocked.add(name);
+  const tabEl = document.querySelector(`.tab[data-tab="${name}"]`);
+  tabEl.classList.remove('locked');
+  tabEl.classList.add('complete');
+  if (autoAdvance) setTab(name);
+}
+
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => setTab(t.dataset.tab));
+});
+
+function grabFrameDataURL(quality = 0.85) {
+  const c = document.createElement('canvas');
+  c.width = video.videoWidth;
+  c.height = video.videoHeight;
+  c.getContext('2d').drawImage(video, 0, 0);
+  return c.toDataURL('image/jpeg', quality);
+}
+
+async function apiPost(path, body) {
+  let resp;
+  try {
+    resp = await fetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch (netErr) {
+    throw new Error(
+      `Network error reaching the server (${netErr.message}). ` +
+      `Check the Tailscale connection between this device and the desktop, and that the ` +
+      `server is still running.`
+    );
+  }
+  let json;
+  try {
+    json = await resp.json();
+  } catch {
+    throw new Error(`Server returned a non-JSON response (HTTP ${resp.status}).`);
+  }
+  if (!resp.ok || !json.ok) {
+    throw new Error(json.error || `Server error (HTTP ${resp.status})`);
+  }
+  return json;
+}
+
+$('btn-camera').addEventListener('click', async () => {
+  clearError();
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: false });
+    video.srcObject = stream;
+    await video.play();
+    setBadge('badge-camera', true);
+    $('next-camera').disabled = false;
+    unlockTab('plate', false);
+  } catch (e) {
+    let msg = `Camera access failed: ${e.message}.`;
+    if (e.name === 'NotAllowedError') {
+      msg += ' You denied (or your browser blocked) the camera permission prompt. ' +
+             'Reload the page and allow camera access when asked, or check your browser\'s ' +
+             'site settings for this page.';
+    } else if (e.name === 'NotFoundError') {
+      msg += ' No camera was found on this device.';
+    }
+    showError(msg);
+  }
+});
+$('next-camera').addEventListener('click', () => setTab('plate'));
+
+// Part B (background-capture streamlining): the background burst used to be
+// a deliberate manual step -- "step out of frame, THEN click a button" --
+// which is awkward for a solo user with no one else to click it (by the
+// time they've stepped away from the desk, no one is there to press
+// Capture). calibrate_plate_person_excluded (server-side, unchanged by this
+// change) already masks out the subject's own BiSeNet head/hair/neck pixels
+// PER BURST FRAME before taking the per-pixel median, so it tolerates the
+// subject still being in frame during the burst (see its docstring) -- it
+// was already the tolerant method server.py's /api/calibrate_plate wires up,
+// this just stops requiring a manual click to trigger it. Capture now starts
+// automatically the moment this tab becomes active (a short lead-in delay
+// gives a solo user time to actually step out if they want to, for the best
+// possible coverage; if they don't move at all the person-exclusion still
+// produces a usable plate, just with the same documented never-uncovered-
+// pixel fallback gap calibrate_plate_person_excluded's docstring already
+// describes -- not a new limitation introduced here).
+const PLATE_LEADIN_MS = 1200;      // time to actually step out before frames are grabbed
+const PLATE_BURST_FRAMES = 15;     // was 6 -- more temporal samples can only help the
+const PLATE_BURST_GAP_MS = 100;    // person-excluded median's coverage, never hurt it
+let plateCaptureStarted = false;
+
+async function runPlateAutoCapture() {
+  clearError();
+  $('btn-plate-retry').style.display = 'none';
+  $('plate-auto-status').textContent = 'Step out of frame if you can -- capturing in a moment...';
+  await new Promise(r => setTimeout(r, PLATE_LEADIN_MS));
+  $('plate-auto-status').textContent = 'Capturing background...';
+  try {
+    const frames = [];
+    for (let i = 0; i < PLATE_BURST_FRAMES; i++) {
+      frames.push(grabFrameDataURL());
+      await new Promise(r => setTimeout(r, PLATE_BURST_GAP_MS));
+    }
+    await apiPost('/api/calibrate_plate', { frames });
+    setBadge('badge-plate', true);
+    $('plate-auto-status').textContent = 'Background captured.';
+    $('next-plate').disabled = false;
+    unlockTab('pose', true);  // auto-advance -- no click needed for this step
+  } catch (e) {
+    $('plate-auto-status').textContent = 'Automatic capture failed.';
+    $('btn-plate-retry').style.display = '';
+    showError(`Background calibration failed: ${e.message}`);
+  }
+}
+$('btn-plate-retry').addEventListener('click', () => runPlateAutoCapture());
+$('next-plate').addEventListener('click', () => setTab('pose'));
+
+const _origSetTab = setTab;
+setTab = function (name) {
+  _origSetTab(name);
+  if (name === 'plate' && !plateCaptureStarted && unlocked.has('plate')) {
+    plateCaptureStarted = true;
+    runPlateAutoCapture();
+  }
+};
+
+$('btn-pose').addEventListener('click', async () => {
+  clearError();
+  $('btn-pose').disabled = true;
+  try {
+    const frame = grabFrameDataURL();
+    await apiPost('/api/calibrate_pose', { frame });
+    setBadge('badge-pose', true);
+    $('next-pose').disabled = false;
+    unlockTab('capture', false);
+  } catch (e) {
+    showError(`Pose calibration failed: ${e.message}`);
+  } finally {
+    $('btn-pose').disabled = false;
+  }
+});
+$('next-pose').addEventListener('click', () => setTab('capture'));
+
+async function doSnapshot() {
+  if (busy) return;
+  busy = true;
+  clearError();
+  $('btn-snap').disabled = true;
+  const dataUrl = grabFrameDataURL();
+
+  const img = new Image();
+  img.onload = () => {
+    capturedCanvas.width = img.width;
+    capturedCanvas.height = img.height;
+    capturedCanvas.getContext('2d').drawImage(img, 0, 0);
+  };
+  img.src = dataUrl;
+
+  statusEl.className = 'status-line processing';
+  statusEl.textContent = 'Processing (this takes ~1.2s or more — not live) …';
+  timingsEl.textContent = '';
+  const t0 = performance.now();
+
+  try {
+    const json = await apiPost('/api/snapshot', { frame: dataUrl });
+    const totalMs = performance.now() - t0;
+    resultImg.src = json.result;
+    statusEl.className = 'status-line ready';
+    statusEl.textContent = 'Done';
+    const t = json.timings_ms || {};
+    timingsEl.textContent =
+      `server: track=${(t.track_ms||0).toFixed(0)}ms fit3d=${(t.fit3d_ms||0).toFixed(0)}ms ` +
+      `render=${(t.render_ms||0).toFixed(0)}ms blend=${(t.blend_ms||0).toFixed(0)}ms ` +
+      `server_total=${(t.total_ms||0).toFixed(0)}ms | end-to-end (capture→displayed)=${totalMs.toFixed(0)}ms`;
+  } catch (e) {
+    statusEl.className = 'status-line';
+    statusEl.textContent = '';
+    showError(`Snapshot failed: ${e.message}`);
+  } finally {
+    $('btn-snap').disabled = false;
+    busy = false;
+  }
+}
+
+$('btn-snap').addEventListener('click', doSnapshot);
+
+$('btn-auto').addEventListener('click', () => {
+  const seconds = parseFloat($('interval').value);
+  if (autoTimer) {
+    clearInterval(autoTimer);
+    autoTimer = null;
+    $('btn-auto').textContent = 'Start auto-capture';
+    $('btn-auto').classList.remove('active-toggle');
+    return;
+  }
+  if (!seconds || seconds <= 0) {
+    showError('Set an interval greater than 0 seconds to use auto-capture, or use manual capture.');
+    return;
+  }
+  $('btn-auto').textContent = 'Stop auto-capture';
+  $('btn-auto').classList.add('active-toggle');
+  autoTimer = setInterval(doSnapshot, seconds * 1000);
+});
+
+window.addEventListener('beforeunload', () => {
+  if (stream) stream.getTracks().forEach(t => t.stop());
+});
+</script>
+
+</body>
+</html>
