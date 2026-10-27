@@ -51,6 +51,10 @@ python v3/live/server.py
 
 Open `https://<server-address>:8443/`, accept the certificate warning, then use the page to calibrate the background plate, calibrate the pose, and take snapshots.
 
+## Licenses
+
+The code in this repository is released under the MIT License (see `LICENSE`). It does not cover third-party models, weights or data. FLAME, GAGAvatar, SMIRK, BiSeNet and any other checkpoint you download are subject to the terms of whoever distributes them, and some of them restrict use to non-commercial purposes. Check those terms before reusing them.
+
 ## Status
 
 Extracted from the main HeadSwap working tree. The code was copied as is, apart from replacing a hardcoded hostname in the server start-up message and normalising line endings. It has not been executed from this layout yet.
